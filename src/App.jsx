@@ -13,6 +13,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/setup" element={<DogProfilePage />} />
+        <Route path="/profile" element={<DogProfilePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/log" element={<DailyLogPage />} />
         <Route path="/insights" element={<InsightsPage />} />

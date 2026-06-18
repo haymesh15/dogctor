@@ -1,8 +1,23 @@
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../supabase'
 import Navbar from '../components/Navbar'
 
 function SettingsPage() {
   const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigate('/')
+  }
+
+  // קישור כל פריט לפעולה שלו
+  const items = [
+    { label: 'Edit dog profile', icon: '🐾', action: () => navigate('/profile') },
+    { label: 'Notifications', icon: '🔔', action: () => {} },
+    { label: 'Subscription', icon: '⭐', action: () => {} },
+    { label: 'Privacy policy', icon: '🔒', action: () => {} },
+    { label: 'Terms of use', icon: '📄', action: () => {} },
+  ]
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-background)', paddingBottom: '70px' }}>
@@ -14,14 +29,8 @@ function SettingsPage() {
 
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
-        {[
-          { label: 'Edit dog profile', icon: '🐾' },
-          { label: 'Notifications', icon: '🔔' },
-          { label: 'Subscription', icon: '⭐' },
-          { label: 'Privacy policy', icon: '🔒' },
-          { label: 'Terms of use', icon: '📄' },
-        ].map(item => (
-          <div key={item.label} style={{
+        {items.map(item => (
+          <div key={item.label} onClick={item.action} style={{
             background: 'var(--color-surface)',
             border: '1.5px solid var(--color-border)',
             borderRadius: 'var(--radius-lg)',
@@ -39,7 +48,7 @@ function SettingsPage() {
           </div>
         ))}
 
-        <button onClick={() => navigate('/')} style={{
+        <button onClick={handleLogout} style={{
           width: '100%', padding: '12px',
           background: 'transparent',
           color: '#E53E3E',
