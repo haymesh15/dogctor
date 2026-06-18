@@ -32,7 +32,7 @@ Keep answers focused and friendly. Use simple language.`
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.sb_publishable_vp2xW503qhkB3K_cqK38Jg_DsgNGgKb,
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
@@ -46,6 +46,7 @@ Keep answers focused and friendly. Use simple language.`
     const data = await response.json()
 
     if (data.error) {
+      console.log('Anthropic error:', JSON.stringify(data.error))
       return res.status(500).json({ error: data.error.message })
     }
 
