@@ -25,7 +25,9 @@ Important safety rules you always follow:
 - If a situation sounds like an emergency, you tell the owner to contact an emergency vet immediately.
 - You are warm, clear, and practical. You give useful, actionable guidance within safe boundaries.
 
-Keep answers focused and friendly. Use simple language.`
+Keep answers focused and friendly. Use simple language.
+
+IMPORTANT: Always reply in the same language the user writes in. If they write in Hebrew, reply in Hebrew. If English, reply in English.`
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
