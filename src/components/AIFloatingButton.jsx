@@ -31,34 +31,73 @@ function AIFloatingButton() {
     { role: 'assistant', content: 'Hi! I\'m Dr. Dogctor 🐾 Ask me anything about your dog\'s health, behavior, training, or nutrition.' }
   ])
   const [input, setInput] = useState('')
+  const [image, setImage] = useState(null)
   const [loading, setLoading] = useState(false)
   const endRef = useRef(null)
+  const fileRef = useRef(null)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  const send = async () => {
-    if (!input.trim() || loading) return
+  const handleImage = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImage({
+        preview: reader.result,
+        base64: reader.result.split(',')[1],
+        mediaType: file.type
+      })
+    }
+    reader.readAsDataURL(file)
+  }
 
-    const userMsg = { role: 'user', content: input.trim() }
-    const newMessages = [...messages, userMsg]
+  const send = async () => {
+    if ((!input.trim() && !image) || loading) return
+
+    // build the content for the API
+    const apiContent = []
+    if (image) {
+      apiContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: image.mediaType, data: image.base64 }
+      })
+    }
+    if (input.trim()) {
+      apiContent.push({ type: 'text', text: input.trim() })
+    }
+
+    // build the message for display
+    const displayMsg = { role: 'user', content: input.trim(), image: image?.preview }
+    const newMessages = [...messages, displayMsg]
     setMessages(newMessages)
+
+    // build full api history
+    const apiMessages = newMessages
+      .filter((m, idx) => !(m.role === 'assistant' && idx === 0))
+      .map(m => {
+        if (m.image) {
+          const c = []
+          c.push({ type: 'image', source: { type: 'base64', media_type: image?.mediaType || 'image/jpeg', data: image?.base64 } })
+          if (m.content) c.push({ type: 'text', text: m.content })
+          return { role: 'user', content: c }
+        }
+        return { role: m.role, content: m.content }
+      })
+
     setInput('')
+    setImage(null)
     setLoading(true)
 
     try {
-      const apiMessages = newMessages.filter(m => m.role !== 'assistant' || newMessages.indexOf(m) !== 0)
-        .map(m => ({ role: m.role, content: m.content }))
-
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: apiMessages })
       })
-
       const data = await res.json()
-
       if (data.reply) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
       } else {
@@ -67,13 +106,11 @@ function AIFloatingButton() {
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I could not connect. Please try again.' }])
     }
-
     setLoading(false)
   }
 
   return (
     <>
-      {/* הכפתור הצף */}
       {!open && (
         <button onClick={() => setOpen(true)} style={{
           position: 'fixed', bottom: '80px', right: '16px',
@@ -86,7 +123,6 @@ function AIFloatingButton() {
         </button>
       )}
 
-      {/* חלון הצ'אט */}
       {open && (
         <div style={{
           position: 'fixed', bottom: '0', right: '0', left: '0',
@@ -98,7 +134,6 @@ function AIFloatingButton() {
           overflow: 'hidden'
         }}>
 
-          {/* כותרת */}
           <div style={{ background: 'linear-gradient(135deg, #FF8C42, #FF6B35)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <DogDoctor size={40} />
@@ -110,7 +145,6 @@ function AIFloatingButton() {
             <button onClick={() => setOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px' }}>×</button>
           </div>
 
-          {/* הודעות */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#FFF8F2' }}>
             {messages.map((m, i) => (
               <div key={i} style={{
@@ -124,6 +158,7 @@ function AIFloatingButton() {
                 border: m.role === 'user' ? 'none' : '1px solid #FFE0CC',
                 whiteSpace: 'pre-wrap'
               }}>
+                {m.image && <img src={m.image} alt="upload" style={{ width: '100%', borderRadius: '10px', marginBottom: m.content ? '6px' : 0 }} />}
                 {m.content}
               </div>
             ))}
@@ -135,8 +170,18 @@ function AIFloatingButton() {
             <div ref={endRef}></div>
           </div>
 
-          {/* תיבת הקלדה */}
-          <div style={{ padding: '12px', borderTop: '1px solid #FFE0CC', display: 'flex', gap: '8px', background: '#fff' }}>
+          {/* image preview */}
+          {image && (
+            <div style={{ padding: '8px 12px', borderTop: '1px solid #FFE0CC', display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF8F2' }}>
+              <img src={image.preview} alt="preview" style={{ width: '44px', height: '44px', borderRadius: '8px', objectFit: 'cover' }} />
+              <span style={{ fontSize: '12px', color: '#B0A99E', flex: 1 }}>Photo ready to send</span>
+              <button onClick={() => setImage(null)} style={{ background: 'none', border: 'none', color: '#E53E3E', cursor: 'pointer', fontSize: '16px' }}>×</button>
+            </div>
+          )}
+
+          <div style={{ padding: '12px', borderTop: '1px solid #FFE0CC', display: 'flex', gap: '8px', background: '#fff', alignItems: 'center' }}>
+            <input type="file" accept="image/*" ref={fileRef} onChange={handleImage} style={{ display: 'none' }} />
+            <button onClick={() => fileRef.current?.click()} style={{ background: '#FFF0E8', border: 'none', color: '#FF6B35', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', flexShrink: 0 }}>📷</button>
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
