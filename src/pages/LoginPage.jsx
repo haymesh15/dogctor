@@ -1,277 +1,191 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import Navbar from '../components/Navbar'
-import AIFloatingButton from '../components/AIFloatingButton'
 
-function InsightsPage() {
+function LoginPage() {
   const navigate = useNavigate()
-  const [dog, setDog] = useState(null)
-  const [logs, setLogs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [selectedDay, setSelectedDay] = useState(null)
-  const [aiFeedback, setAiFeedback] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
+  const [mode, setMode] = useState(null)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    const loadData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        navigate('/')
-        return
-      }
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const audioRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/953/953-200.wav'))
 
-      const { data: dogData } = await supabase
-        .from('dogs')
-        .select('*')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
+  const triggerDogTransition = () => {
+    setIsTransitioning(true)
+    audioRef.current.play().catch(err => console.log('Audio blocked', err))
+    setTimeout(() => {
+      navigate('/dashboard')
+    }, 800)
+  }
 
-      if (!dogData) {
-        navigate('/profile')
-        return
-      }
+  const handleLogin = async () => {
+    setLoading(true)
+    setError('')
+    if (!email || !password) {
+      setError('צריך להזין אימייל וסיסמה')
+      setLoading(false)
+      return
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setError('אימייל או סיסמה שגויים')
+      setLoading(false)
+      return
+    }
+    triggerDogTransition()
+  }
 
-      setDog(dogData)
-
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 7)
-      const weekAgoStr = weekAgo.toISOString().split('T')[0]
-
-      const { data: logsData } = await supabase
-        .from('daily_logs')
-        .select('*')
-        .eq('dog_id', dogData.id)
-        .gte('date', weekAgoStr)
-        .order('date', { ascending: true })
-
-      setLogs(logsData || [])
+  const handleSignUp = async () => {
+    setLoading(true)
+    setError('')
+    if (!name || !email || !password) {
+      setError('צריך למלא שם, אימייל וסיסמה')
+      setLoading(false)
+      return
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } }
+    })
+    if (error) {
+      setError('שגיאה: ' + error.message)
+      setLoading(false)
+      return
+    }
+    if (data.session) {
+      triggerDogTransition()
+    } else {
+      setError('נשלח אימייל אישור. בדוק את תיבת הדואר')
       setLoading(false)
     }
-
-    loadData()
-  }, [])
-
-  // simple instant flags for a day
-  const getFlags = (log) => {
-    if (!log) return []
-    const flags = []
-    if (!log.food) flags.push({ text: 'Did not eat', bad: true })
-    if (!log.water) flags.push({ text: 'Did not drink', bad: true })
-    if (!log.walk) flags.push({ text: 'No walk', bad: false })
-    if (log.mood === 'Sick') flags.push({ text: 'Mood: Sick', bad: true })
-    if (log.mood === 'Tired') flags.push({ text: 'Mood: Tired', bad: false })
-    if (flags.length === 0) flags.push({ text: 'All good!', bad: false })
-    return flags
   }
 
-  // detect if user writes in Hebrew
-  const isHebrew = (text) => /[\u0590-\u05FF]/.test(text || '')
-
-  const getAiFeedback = async () => {
-    if (!selectedDay?.log) return
-    setAiLoading(true)
-    setAiFeedback('')
-
-    const recentSummary = logs.map(l =>
-      `${l.date}: food=${l.food}, mood=${l.mood}`
-    ).join('; ')
-
-    const language = isHebrew(selectedDay.log.notes) ? 'he' : 'en'
-
-    try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dogName: dog.name,
-          day: selectedDay.log,
-          recentDays: recentSummary,
-          language: language
-        })
-      })
-      const data = await res.json()
-      setAiFeedback(data.reply || 'Could not get feedback. Try again.')
-    } catch (e) {
-      setAiFeedback('Could not connect. Try again.')
-    }
-    setAiLoading(false)
+  const inputStyle = {
+    width: '100%', marginTop: '4px', padding: '10px 12px',
+    border: '1.5px solid #FFE0CC', borderRadius: '10px',
+    fontFamily: 'var(--font-family)', fontSize: '13px',
+    background: '#FFF8F2', outline: 'none', boxSizing: 'border-box'
   }
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--color-background)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--color-text-muted)' }}>Loading...</p>
-      </div>
-    )
+  const labelStyle = {
+    fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)',
+    textTransform: 'uppercase', letterSpacing: '0.5px'
   }
-
-  const totalLogs = logs.length
-  const foodDays = logs.filter(l => l.food).length
-  const waterDays = logs.filter(l => l.water).length
-  const walkDays = logs.filter(l => l.walk).length
-  const bathroomDays = logs.filter(l => l.bathroom).length
-
-  const moodCounts = {}
-  logs.forEach(l => { if (l.mood) moodCounts[l.mood] = (moodCounts[l.mood] || 0) + 1 })
-  const topMood = Object.keys(moodCounts).sort((a, b) => moodCounts[b] - moodCounts[a])[0] || '—'
-
-  const last7Days = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    const dateStr = d.toISOString().split('T')[0]
-    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' })
-    const log = logs.find(l => l.date === dateStr)
-    const score = log ? (log.food ? 1 : 0) + (log.water ? 1 : 0) + (log.walk ? 1 : 0) + (log.bathroom ? 1 : 0) : 0
-    last7Days.push({ day: dayName, date: dateStr, score, hasLog: !!log, log })
-  }
-
-  const openDay = (d) => {
-    if (!d.hasLog) return
-    setSelectedDay(d)
-    setAiFeedback('')
-  }
-
-  const stats = [
-    { label: 'Days logged', value: `${totalLogs} this week`, color: 'var(--color-text)' },
-    { label: 'Walks', value: `${walkDays}/${totalLogs} days`, color: walkDays >= totalLogs / 2 ? '#38A169' : 'var(--color-text)' },
-    { label: 'Eating', value: `${foodDays}/${totalLogs} days`, color: 'var(--color-text)' },
-    { label: 'Drinking', value: `${waterDays}/${totalLogs} days`, color: 'var(--color-text)' },
-    { label: 'Bathroom', value: `${bathroomDays}/${totalLogs} days`, color: 'var(--color-text)' },
-    { label: 'Common mood', value: topMood, color: '#38A169' },
-  ]
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-background)', paddingBottom: '70px' }}>
+    <div style={{ minHeight: '100vh', background: '#FFF4EC', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', position: 'relative', overflow: 'hidden' }}>
 
-      <div style={{ padding: '16px' }}>
-        <h1 style={{ fontSize: 'var(--font-size-h1)', fontWeight: 800 }}>Insights</h1>
-        <p style={{ fontSize: 'var(--font-size-caption)', color: 'var(--color-text-muted)', fontWeight: 600 }}>{dog.name}'s weekly overview</p>
-      </div>
+      {isTransitioning && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          background: '#FFF4EC', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <svg width="200" height="200" viewBox="0 0 100 100" style={{
+            fill: '#FF6B35',
+            animation: 'pawExpand 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards'
+          }}>
+            <path d="M 50 45 C 32 45 32 75 50 78 C 68 75 68 45 50 45 Z" />
+            <circle cx="28" cy="36" r="8" />
+            <circle cx="42" cy="24" r="9" />
+            <circle cx="58" cy="24" r="9" />
+            <circle cx="72" cy="36" r="8" />
+          </svg>
+          <style>{`
+            @keyframes pawExpand {
+              0% { transform: scale(0); opacity: 0; }
+              20% { transform: scale(1); opacity: 1; }
+              100% { transform: scale(25); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
 
-      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <svg width="50" height="28" viewBox="0 0 80 36" style={{ position: 'absolute', top: '18%', left: '12%', transform: 'rotate(-25deg)', opacity: 0.8 }}>
+        <rect x="20" y="13" width="40" height="10" rx="5" fill="#E8C9A8"/><circle cx="20" cy="11" r="8" fill="#E8C9A8"/><circle cx="20" cy="25" r="8" fill="#E8C9A8"/><circle cx="60" cy="11" r="8" fill="#E8C9A8"/><circle cx="60" cy="25" r="8" fill="#E8C9A8"/>
+      </svg>
+      <svg width="40" height="22" viewBox="0 0 80 36" style={{ position: 'absolute', top: '30%', right: '12%', transform: 'rotate(18deg)', opacity: 0.8 }}>
+        <rect x="20" y="13" width="40" height="10" rx="5" fill="#E8C9A8"/><circle cx="20" cy="11" r="8" fill="#E8C9A8"/><circle cx="20" cy="25" r="8" fill="#E8C9A8"/><circle cx="60" cy="11" r="8" fill="#E8C9A8"/><circle cx="60" cy="25" r="8" fill="#E8C9A8"/>
+      </svg>
+      <svg width="42" height="42" viewBox="0 0 60 60" style={{ position: 'absolute', bottom: '14%', left: '14%', opacity: 0.85 }}>
+        <circle cx="30" cy="30" r="24" fill="#FF8C5A"/><path d="M 8 24 Q 30 32 52 24" stroke="#D85A30" strokeWidth="2.5" fill="none"/><path d="M 12 38 Q 30 30 48 38" stroke="#D85A30" strokeWidth="2.5" fill="none"/>
+      </svg>
 
-        {totalLogs === 0 ? (
-          <div style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '20px', textAlign: 'center' }}>
-            <p style={{ fontSize: 'var(--font-size-body)', fontWeight: 600, color: 'var(--color-text-muted)' }}>No logs yet this week.</p>
-            <p style={{ fontSize: 'var(--font-size-caption)', color: 'var(--color-text-muted)', marginTop: '4px' }}>Start logging to see insights!</p>
+      <div style={{ width: '100%', maxWidth: '360px', position: 'relative', zIndex: 1, textAlign: 'center' }}>
+
+        <svg width="140" height="140" viewBox="0 0 100 100">
+          <ellipse cx="50" cy="92" rx="28" ry="5" fill="#F0DCC8"/>
+          <path d="M 28 80 Q 28 56 50 56 Q 72 56 72 80 Z" fill="#D7A15C"/>
+          <path d="M 40 56 Q 50 56 50 78 Q 50 56 60 56 Z" fill="#FFF2DF"/>
+          <circle cx="50" cy="40" r="23" fill="#D7A15C"/>
+          <circle cx="40" cy="37" r="12" fill="#FFF2DF"/>
+          <path d="M 30 22 Q 12 14 22 40 Z" fill="#B57C38"/>
+          <path d="M 70 22 Q 88 14 78 40 Z" fill="#B57C38"/>
+          <circle cx="42" cy="38" r="3.5" fill="#2D3748"/>
+          <circle cx="43.5" cy="36.5" r="1.2" fill="#FFF"/>
+          <circle cx="58" cy="38" r="3.5" fill="#2D3748"/>
+          <circle cx="59.5" cy="36.5" r="1.2" fill="#FFF"/>
+          <path d="M 45 45 Q 50 41 55 45 Q 50 50 45 45 Z" fill="#2D3748"/>
+          <path d="M 47 48 Q 50 58 53 48 Z" fill="#FF7B7B"/>
+        </svg>
+
+        <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#3A2A1E', margin: 0 }}>Dogctor</h1>
+        <p style={{ fontSize: '13px', color: '#B0826A', margin: '4px 0 24px' }}>Smart health for your dog</p>
+
+        {mode === null && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '0 8px' }}>
+            <button onClick={() => { setMode('login'); setError('') }} style={{ width: '100%', padding: '13px', background: '#FF6B35', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-family)', cursor: 'pointer' }}>Log in</button>
+            <button onClick={() => { setMode('signup'); setError('') }} style={{ width: '100%', padding: '13px', background: 'transparent', color: '#FF6B35', border: '2px solid #FFD0B0', borderRadius: '12px', fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-family)', cursor: 'pointer' }}>Create account</button>
           </div>
-        ) : (
-          <>
-            <div style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '16px 14px' }}>
-              <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '14px' }}>Daily activity · tap a day</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '120px', gap: '6px' }}>
-                {last7Days.map((d, i) => {
-                  const heightPct = (d.score / 4) * 100
-                  const barColor = d.score >= 3 ? '#38A169' : d.score >= 1 ? '#FF8C42' : '#E2E8F0'
-                  return (
-                    <div key={i} onClick={() => openDay(d)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', cursor: d.hasLog ? 'pointer' : 'default' }}>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '4px' }}>{d.hasLog ? d.score : ''}</div>
-                      <div style={{
-                        width: '100%',
-                        height: `${Math.max(heightPct, 4)}%`,
-                        background: barColor,
-                        borderRadius: '6px 6px 0 0',
-                        transition: 'height 0.3s',
-                        minHeight: '4px',
-                        border: selectedDay?.date === d.date ? '2px solid #2D2D3A' : 'none'
-                      }}></div>
-                      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '6px', fontWeight: 600 }}>{d.day}</div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginTop: '12px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#38A169' }}></div>
-                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Great (3-4)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#FF8C42' }}></div>
-                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Partial (1-2)</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#E2E8F0' }}></div>
-                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>No log</span>
-                </div>
-              </div>
-            </div>
+        )}
 
-            {/* day detail panel */}
-            {selectedDay && selectedDay.log && (
-              <div style={{ background: 'var(--color-surface)', border: '2px solid #FF8C42', borderRadius: 'var(--radius-lg)', padding: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <p style={{ fontWeight: 800, fontSize: 'var(--font-size-body)' }}>{selectedDay.day} · {selectedDay.date}</p>
-                  <button onClick={() => { setSelectedDay(null); setAiFeedback('') }} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '16px' }}>×</button>
-                </div>
+        {mode !== null && (
+          <div style={{ position: 'relative', background: '#fff', border: '2px solid #FFE0CC', borderRadius: '20px', padding: '22px 18px', boxShadow: '0 8px 24px rgba(216,90,48,0.08)', textAlign: 'right' }}>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
-                  {getFlags(selectedDay.log).map((f, idx) => (
-                    <span key={idx} style={{
-                      fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px',
-                      background: f.bad ? '#FEECEC' : '#F0FFF6',
-                      color: f.bad ? '#E53E3E' : '#38A169'
-                    }}>{f.text}</span>
-                  ))}
-                </div>
+            <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '13px solid transparent', borderRight: '13px solid transparent', borderBottom: '13px solid #FFE0CC' }}></div>
+            <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '11px solid transparent', borderRight: '11px solid transparent', borderBottom: '11px solid #fff' }}></div>
 
-                {selectedDay.log.notes && (
-                  <div style={{ background: '#FFF8F2', borderRadius: '8px', padding: '8px 10px', marginBottom: '10px' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '2px' }}>Note</p>
-                    <p style={{ fontSize: '12px' }}>{selectedDay.log.notes}</p>
-                  </div>
-                )}
+            {error && (
+              <div style={{ background: '#FEECEC', border: '1px solid #E53E3E', borderRadius: '8px', padding: '8px 10px', marginBottom: '12px', fontSize: '12px', color: '#E53E3E', textAlign: 'center' }}>{error}</div>
+            )}
 
-                {!aiFeedback && (
-                  <button onClick={getAiFeedback} disabled={aiLoading} style={{
-                    width: '100%', padding: '10px',
-                    background: 'linear-gradient(135deg, #FF8C42, #FF6B35)',
-                    color: '#fff', border: 'none', borderRadius: 'var(--radius-md)',
-                    fontSize: '12px', fontWeight: 700, fontFamily: 'var(--font-family)', cursor: 'pointer',
-                    opacity: aiLoading ? 0.7 : 1
-                  }}>
-                    {aiLoading ? 'Dr. Dogctor is checking...' : '🩺 Get AI insight on this day'}
-                  </button>
-                )}
-
-                {aiFeedback && (
-                  <div style={{ background: 'linear-gradient(135deg, #FFF0E4, #FFE8D4)', borderRadius: '8px', padding: '10px 12px', border: '1px solid #FFD0A8' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-primary-dark)', textTransform: 'uppercase', marginBottom: '4px' }}>Dr. Dogctor says</p>
-                    <p style={{ fontSize: '12px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{aiFeedback}</p>
-                  </div>
-                )}
+            {mode === 'signup' && (
+              <div style={{ marginBottom: '12px' }}>
+                <label style={labelStyle}>Name</label>
+                <input type="text" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
               </div>
             )}
 
-            <div style={{ background: '#F0FFF6', border: '1.5px solid #38A169', borderRadius: 'var(--radius-lg)', padding: '12px' }}>
-              <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 800, color: '#38A169', textTransform: 'uppercase', marginBottom: '4px' }}>This week</p>
-              <p style={{ fontSize: '11px', fontWeight: 500, color: '#2D7A50' }}>{dog.name} has {totalLogs} {totalLogs === 1 ? 'log' : 'logs'} this week. Keep tracking!</p>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={labelStyle}>Email</label>
+              <input type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
             </div>
 
-            {stats.map(item => (
-              <div key={item.label} style={{
-                background: 'var(--color-surface)',
-                border: '1.5px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '12px 14px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <p style={{ fontSize: 'var(--font-size-body)', fontWeight: 600 }}>{item.label}</p>
-                <p style={{ fontSize: 'var(--font-size-body)', fontWeight: 800, color: item.color }}>{item.value}</p>
-              </div>
-            ))}
-          </>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>Password</label>
+              <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} />
+            </div>
+
+            <button onClick={mode === 'login' ? handleLogin : handleSignUp} disabled={loading} style={{ width: '100%', padding: '12px', background: '#FF6B35', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-family)', cursor: 'pointer', opacity: loading ? 0.7 : 1, marginBottom: '10px' }}>
+              {loading ? 'Loading...' : (mode === 'login' ? 'Log in' : 'Create account')}
+            </button>
+
+            <p style={{ fontSize: '12px', color: '#B0826A', margin: 0, textAlign: 'center' }}>
+              {mode === 'login' ? 'Don\'t have an account? ' : 'Already have an account? '}
+              <span onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }} style={{ color: '#FF6B35', fontWeight: 700, cursor: 'pointer' }}>
+                {mode === 'login' ? 'Sign up' : 'Log in'}
+              </span>
+            </p>
+
+          </div>
         )}
 
       </div>
-      <Navbar />
-      <AIFloatingButton />
     </div>
   )
 }
 
-export default InsightsPage
+export default LoginPage

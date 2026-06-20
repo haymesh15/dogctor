@@ -53,7 +53,6 @@ function InsightsPage() {
     loadData()
   }, [])
 
-  // simple instant flags for a day
   const getFlags = (log) => {
     if (!log) return []
     const flags = []
@@ -66,7 +65,6 @@ function InsightsPage() {
     return flags
   }
 
-  // detect if user writes in Hebrew
   const isHebrew = (text) => /[\u0590-\u05FF]/.test(text || '')
 
   const getAiFeedback = async () => {
@@ -199,7 +197,6 @@ function InsightsPage() {
               </div>
             </div>
 
-            {/* day detail panel */}
             {selectedDay && selectedDay.log && (
               <div style={{ background: 'var(--color-surface)', border: '2px solid #FF8C42', borderRadius: 'var(--radius-lg)', padding: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
