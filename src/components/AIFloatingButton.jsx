@@ -57,30 +57,23 @@ function AIFloatingButton() {
   const send = async () => {
     if ((!input.trim() && !image) || loading) return
 
-    // build the content for the API
-    const apiContent = []
-    if (image) {
-      apiContent.push({
-        type: 'image',
-        source: { type: 'base64', media_type: image.mediaType, data: image.base64 }
-      })
+    // store the image WITH the message so history stays intact
+    const displayMsg = {
+      role: 'user',
+      content: input.trim(),
+      imgPreview: image?.preview || null,
+      imgBase64: image?.base64 || null,
+      imgType: image?.mediaType || null
     }
-    if (input.trim()) {
-      apiContent.push({ type: 'text', text: input.trim() })
-    }
-
-    // build the message for display
-    const displayMsg = { role: 'user', content: input.trim(), image: image?.preview }
     const newMessages = [...messages, displayMsg]
     setMessages(newMessages)
 
-    // build full api history
+    // build api history from stored data (not the cleared variable)
     const apiMessages = newMessages
       .filter((m, idx) => !(m.role === 'assistant' && idx === 0))
       .map(m => {
-        if (m.image) {
-          const c = []
-          c.push({ type: 'image', source: { type: 'base64', media_type: image?.mediaType || 'image/jpeg', data: image?.base64 } })
+        if (m.imgBase64) {
+          const c = [{ type: 'image', source: { type: 'base64', media_type: m.imgType, data: m.imgBase64 } }]
           if (m.content) c.push({ type: 'text', text: m.content })
           return { role: 'user', content: c }
         }
@@ -125,8 +118,8 @@ function AIFloatingButton() {
 
       {open && (
         <div style={{
-          position: 'fixed', bottom: '0', right: '0', left: '0',
-          margin: '0 auto', maxWidth: '420px',
+          position: 'fixed', bottom: '0', right: '16px',
+          width: '380px', maxWidth: 'calc(100vw - 32px)',
           height: '80vh', background: '#fff',
           borderRadius: '20px 20px 0 0',
           boxShadow: '0 -4px 24px rgba(0,0,0,0.15)',
@@ -158,7 +151,7 @@ function AIFloatingButton() {
                 border: m.role === 'user' ? 'none' : '1px solid #FFE0CC',
                 whiteSpace: 'pre-wrap'
               }}>
-                {m.image && <img src={m.image} alt="upload" style={{ width: '100%', borderRadius: '10px', marginBottom: m.content ? '6px' : 0 }} />}
+                {m.imgPreview && <img src={m.imgPreview} alt="upload" style={{ width: '100%', borderRadius: '10px', marginBottom: m.content ? '6px' : 0 }} />}
                 {m.content}
               </div>
             ))}
@@ -170,7 +163,6 @@ function AIFloatingButton() {
             <div ref={endRef}></div>
           </div>
 
-          {/* image preview */}
           {image && (
             <div style={{ padding: '8px 12px', borderTop: '1px solid #FFE0CC', display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF8F2' }}>
               <img src={image.preview} alt="preview" style={{ width: '44px', height: '44px', borderRadius: '8px', objectFit: 'cover' }} />
