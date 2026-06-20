@@ -9,6 +9,9 @@ function InsightsPage() {
   const [dog, setDog] = useState(null)
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedDay, setSelectedDay] = useState(null)
+  const [aiFeedback, setAiFeedback] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -50,6 +53,52 @@ function InsightsPage() {
     loadData()
   }, [])
 
+  // simple instant flags for a day
+  const getFlags = (log) => {
+    if (!log) return []
+    const flags = []
+    if (!log.food) flags.push({ text: 'Did not eat', bad: true })
+    if (!log.water) flags.push({ text: 'Did not drink', bad: true })
+    if (!log.walk) flags.push({ text: 'No walk', bad: false })
+    if (log.mood === 'Sick') flags.push({ text: 'Mood: Sick', bad: true })
+    if (log.mood === 'Tired') flags.push({ text: 'Mood: Tired', bad: false })
+    if (flags.length === 0) flags.push({ text: 'All good!', bad: false })
+    return flags
+  }
+
+  // detect if user writes in Hebrew
+  const isHebrew = (text) => /[\u0590-\u05FF]/.test(text || '')
+
+  const getAiFeedback = async () => {
+    if (!selectedDay?.log) return
+    setAiLoading(true)
+    setAiFeedback('')
+
+    const recentSummary = logs.map(l =>
+      `${l.date}: food=${l.food}, mood=${l.mood}`
+    ).join('; ')
+
+    const language = isHebrew(selectedDay.log.notes) ? 'he' : 'en'
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dogName: dog.name,
+          day: selectedDay.log,
+          recentDays: recentSummary,
+          language: language
+        })
+      })
+      const data = await res.json()
+      setAiFeedback(data.reply || 'Could not get feedback. Try again.')
+    } catch (e) {
+      setAiFeedback('Could not connect. Try again.')
+    }
+    setAiLoading(false)
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--color-background)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -68,7 +117,6 @@ function InsightsPage() {
   logs.forEach(l => { if (l.mood) moodCounts[l.mood] = (moodCounts[l.mood] || 0) + 1 })
   const topMood = Object.keys(moodCounts).sort((a, b) => moodCounts[b] - moodCounts[a])[0] || '—'
 
-  // הכנת נתונים לגרף - 7 הימים האחרונים
   const last7Days = []
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
@@ -77,7 +125,13 @@ function InsightsPage() {
     const dayName = d.toLocaleDateString('en-US', { weekday: 'short' })
     const log = logs.find(l => l.date === dateStr)
     const score = log ? (log.food ? 1 : 0) + (log.water ? 1 : 0) + (log.walk ? 1 : 0) + (log.bathroom ? 1 : 0) : 0
-    last7Days.push({ day: dayName, score, hasLog: !!log })
+    last7Days.push({ day: dayName, date: dateStr, score, hasLog: !!log, log })
+  }
+
+  const openDay = (d) => {
+    if (!d.hasLog) return
+    setSelectedDay(d)
+    setAiFeedback('')
   }
 
   const stats = [
@@ -106,15 +160,14 @@ function InsightsPage() {
           </div>
         ) : (
           <>
-            {/* הגרף היומי */}
             <div style={{ background: 'var(--color-surface)', border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '16px 14px' }}>
-              <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '14px' }}>Daily activity</p>
+              <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '14px' }}>Daily activity · tap a day</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '120px', gap: '6px' }}>
                 {last7Days.map((d, i) => {
                   const heightPct = (d.score / 4) * 100
                   const barColor = d.score >= 3 ? '#38A169' : d.score >= 1 ? '#FF8C42' : '#E2E8F0'
                   return (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                    <div key={i} onClick={() => openDay(d)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', cursor: d.hasLog ? 'pointer' : 'default' }}>
                       <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '4px' }}>{d.hasLog ? d.score : ''}</div>
                       <div style={{
                         width: '100%',
@@ -122,7 +175,8 @@ function InsightsPage() {
                         background: barColor,
                         borderRadius: '6px 6px 0 0',
                         transition: 'height 0.3s',
-                        minHeight: '4px'
+                        minHeight: '4px',
+                        border: selectedDay?.date === d.date ? '2px solid #2D2D3A' : 'none'
                       }}></div>
                       <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '6px', fontWeight: 600 }}>{d.day}</div>
                     </div>
@@ -144,6 +198,52 @@ function InsightsPage() {
                 </div>
               </div>
             </div>
+
+            {/* day detail panel */}
+            {selectedDay && selectedDay.log && (
+              <div style={{ background: 'var(--color-surface)', border: '2px solid #FF8C42', borderRadius: 'var(--radius-lg)', padding: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <p style={{ fontWeight: 800, fontSize: 'var(--font-size-body)' }}>{selectedDay.day} · {selectedDay.date}</p>
+                  <button onClick={() => { setSelectedDay(null); setAiFeedback('') }} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '16px' }}>×</button>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                  {getFlags(selectedDay.log).map((f, idx) => (
+                    <span key={idx} style={{
+                      fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px',
+                      background: f.bad ? '#FEECEC' : '#F0FFF6',
+                      color: f.bad ? '#E53E3E' : '#38A169'
+                    }}>{f.text}</span>
+                  ))}
+                </div>
+
+                {selectedDay.log.notes && (
+                  <div style={{ background: '#FFF8F2', borderRadius: '8px', padding: '8px 10px', marginBottom: '10px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '2px' }}>Note</p>
+                    <p style={{ fontSize: '12px' }}>{selectedDay.log.notes}</p>
+                  </div>
+                )}
+
+                {!aiFeedback && (
+                  <button onClick={getAiFeedback} disabled={aiLoading} style={{
+                    width: '100%', padding: '10px',
+                    background: 'linear-gradient(135deg, #FF8C42, #FF6B35)',
+                    color: '#fff', border: 'none', borderRadius: 'var(--radius-md)',
+                    fontSize: '12px', fontWeight: 700, fontFamily: 'var(--font-family)', cursor: 'pointer',
+                    opacity: aiLoading ? 0.7 : 1
+                  }}>
+                    {aiLoading ? 'Dr. Dogctor is checking...' : '🩺 Get AI insight on this day'}
+                  </button>
+                )}
+
+                {aiFeedback && (
+                  <div style={{ background: 'linear-gradient(135deg, #FFF0E4, #FFE8D4)', borderRadius: '8px', padding: '10px 12px', border: '1px solid #FFD0A8' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-primary-dark)', textTransform: 'uppercase', marginBottom: '4px' }}>Dr. Dogctor says</p>
+                    <p style={{ fontSize: '12px', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{aiFeedback}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ background: '#F0FFF6', border: '1.5px solid #38A169', borderRadius: 'var(--radius-lg)', padding: '12px' }}>
               <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 800, color: '#38A169', textTransform: 'uppercase', marginBottom: '4px' }}>This week</p>
