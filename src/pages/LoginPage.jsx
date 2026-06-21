@@ -12,6 +12,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
   const audioRef = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/953/953-200.wav'))
 
   const triggerDogTransition = () => {
@@ -58,11 +59,17 @@ function LoginPage() {
       return
     }
     if (data.session) {
-      triggerDogTransition()
+      setLoading(false)
+      setShowTerms(true)
     } else {
       setError('נשלח אימייל אישור. בדוק את תיבת הדואר')
       setLoading(false)
     }
+  }
+
+  const acceptTerms = () => {
+    setShowTerms(false)
+    triggerDogTransition()
   }
 
   const inputStyle = {
@@ -166,7 +173,6 @@ function LoginPage() {
             <circle cx="70" cy="22" r="2" fill="#2D3748" />
             <ellipse cx="76" cy="28" rx="6" ry="4" fill="#FFF2DF" />
             <circle cx="80" cy="26" r="2.5" fill="#2D3748" />
-            {/* רגליים זזות בריצה */}
             <ellipse cx="28" cy="52" rx="4" ry="8" fill="#B57C38" style={{ transformOrigin: '28px 46px', animation: 'legSwing 0.3s infinite ease-in-out' }} />
             <ellipse cx="52" cy="52" rx="4" ry="8" fill="#D7A15C" style={{ transformOrigin: '52px 46px', animation: 'legSwing 0.3s infinite ease-in-out reverse' }} />
           </svg>
@@ -178,7 +184,6 @@ function LoginPage() {
 
         {/* סצנה 2: מרדף דוור (הכלב רודף אחרי הדוור - ימין לשמאל) */}
         <div className="animated-scene" style={{ position: 'absolute', bottom: '8%', left: 0, display: 'flex', alignItems: 'center', gap: '25px', animation: 'sceneMailmanChaseUpdated 13s infinite linear' }}>
-          {/* הדוור */}
           <svg className="animated-sub" width="60" height="90" viewBox="0 0 60 90" style={{ animation: 'premiumHumanRun 0.35s infinite ease-in-out', transform: 'scaleX(-1)' }}>
             <path d="M 22 65 L 12 84 L 5 82" stroke="#2B6CB0" strokeWidth="6" strokeLinecap="round" fill="none" />
             <path d="M 32 65 L 42 80 L 52 82" stroke="#1A365D" strokeWidth="6" strokeLinecap="round" fill="none" />
@@ -188,7 +193,6 @@ function LoginPage() {
             <circle cx="30" cy="20" r="8" fill="#FEEBC8" />
             <path d="M 20 16 Q 30 10 40 16 L 44 18 L 20 18 Z" fill="#1A365D" />
           </svg>
-          {/* הכלב הרודף (פונה שמאלה, רגליים אקטיביות) */}
           <svg className="animated-sub" width="100" height="70" viewBox="0 0 90 60" style={{ animation: 'premiumDogRun 0.35s infinite ease-in-out', animationDelay: '-0.05s' }}>
             <path d="M 78 35 C 88 30 85 15 78 12 C 82 20 80 32 78 35" fill="#B57C38" />
             <ellipse cx="50" cy="38" rx="24" ry="14" fill="#D7A15C" />
@@ -203,11 +207,9 @@ function LoginPage() {
           </svg>
         </div>
 
-        {/* סצנה 3: מרדף גורים במעגל (תיקון מלא - רגליים + ריצה ותפיסה במעגל!) */}
+        {/* סצנה 3: מרדף גורים במעגל */}
         <div style={{ position: 'absolute', top: '40%', left: '5%', width: '130px', height: '130px' }}>
           <div style={{ width: '100%', height: '100%', animation: 'puppyChaseCircle 4s infinite linear', transformOrigin: 'center' }}>
-            
-            {/* גור 1 - רץ במעגל */}
             <svg width="65" height="55" viewBox="0 0 90 70" style={{ position: 'absolute', top: 0, left: 0, animation: 'puppyBodyBob 0.4s infinite ease-in-out' }}>
               <path d="M 16 48 C 6 44 4 25 15 22" stroke="#B57C38" strokeWidth="6" strokeLinecap="round" fill="none" style={{ animation: 'puppyTailFastWag 0.1s infinite ease-in-out', transformOrigin: '16px 48px' }} />
               <ellipse cx="38" cy="46" rx="20" ry="14" fill="#D7A15C" />
@@ -218,12 +220,9 @@ function LoginPage() {
               <circle cx="68" cy="32" r="2.5" fill="#2D3748" />
               <ellipse cx="62" cy="38" rx="5" ry="3" fill="#FFF2DF" />
               <circle cx="62" cy="36" r="2" fill="#2D3748" />
-              {/* רגלי גור */}
               <circle cx="30" cy="62" r="4" fill="#B57C38" />
               <circle cx="48" cy="62" r="4" fill="#D7A15C" />
             </svg>
-
-            {/* גור 2 - רודף אחריו במעגל */}
             <svg width="65" height="55" viewBox="0 0 90 70" style={{ position: 'absolute', bottom: 0, right: 0, transform: 'rotate(180deg)', animation: 'puppyBodyBob 0.4s infinite ease-in-out', animationDelay: '-0.2s' }}>
               <path d="M 16 48 C 6 44 4 25 15 22" stroke="#B57C38" strokeWidth="6" strokeLinecap="round" fill="none" style={{ animation: 'puppyTailFastWag 0.1s infinite ease-in-out', transformOrigin: '16px 48px' }} />
               <ellipse cx="38" cy="46" rx="20" ry="14" fill="#D7A15C" />
@@ -237,45 +236,29 @@ function LoginPage() {
               <circle cx="30" cy="62" r="4" fill="#B57C38" />
               <circle cx="48" cy="62" r="4" fill="#D7A15C" />
             </svg>
-
           </div>
         </div>
 
-        {/* סצנה 4: 🛠️ תיקון יסודי - כלב פרימיום מלא משתין בקשת מודגשת על הברז 🛠️ */}
+        {/* סצנה 4: כלב משתין על הברז */}
         <div style={{ position: 'absolute', bottom: '12%', right: '5%', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-          
-          {/* הכלב המעוצב מחדש (פרופיל מלא עם 4 רגליים ברורות!) */}
           <svg width="95" height="85" viewBox="0 0 100 80">
-            {/* זנב */}
             <path d="M 14 38 C 4 35 6 18 14 15 C 10 24 12 34 14 38" fill="#B57C38" />
-            {/* גוף אופקי יציב של כלב */}
             <ellipse cx="44" cy="46" rx="26" ry="16" fill="#D7A15C" />
-            <ellipse cx="38" cy="46" rx="15" ry="12" fill="#FFF2DF" opacity="0.85" /> {/* כתם בטן */}
-            
-            {/* 3 רגליים עומדות יציב על הקרקע */}
+            <ellipse cx="38" cy="46" rx="15" ry="12" fill="#FFF2DF" opacity="0.85" />
             <rect x="26" y="58" width="6" height="18" rx="3" fill="#B57C38" />
             <rect x="36" y="60" width="6" height="16" rx="3" fill="#D7A15C" />
             <rect x="56" y="58" width="6" height="18" rx="3" fill="#D7A15C" />
-
-            {/* צוואר וראש כלב פרופיל קלאסי */}
             <path d="M 54 42 L 68 28 L 56 22 Z" fill="#D7A15C" />
             <circle cx="66" cy="24" r="14" fill="#D7A15C" />
-            <path d="M 58 12 Q 64 2 62 18 Z" fill="#B57C38" /> {/* אוזן שמוטה מעוצבת */}
-            <circle cx="70" cy="20" r="2.2" fill="#2D3748" /> {/* עין פונה קדימה לברז */}
-            {/* חוטם כלבי בולט ימינה */}
+            <path d="M 58 12 Q 64 2 62 18 Z" fill="#B57C38" />
+            <circle cx="70" cy="20" r="2.2" fill="#2D3748" />
             <ellipse cx="76" cy="26" rx="6" ry="4" fill="#FFF2DF" />
-            <circle cx="80" cy="24" r="2.5" fill="#2D3748" /> {/* אף */}
-
-            {/* הרגל האחורית הרביעית - מורמת באנימציה מהאגן */}
+            <circle cx="80" cy="24" r="2.5" fill="#2D3748" />
             <g style={{ transformOrigin: '24px 46px', animation: 'premiumLegLift 1.2s infinite ease-in-out' }}>
               <rect x="16" y="44" width="7" height="20" rx="3.5" fill="#B57C38" transform="rotate(-65 16 44)" />
             </g>
-
-            {/* 💦 זרם פיפי עבה, ברור ומודגש - נורה בקשת ימינה אל מרכז הברז 💦 */}
             <path d="M 32 54 Q 58 50 84 54" stroke="#ECC94B" strokeWidth="3.5" strokeLinecap="round" fill="none" style={{ strokeDasharray: '8', animation: 'heavyPeeStream 0.6s infinite linear' }} />
           </svg>
-
-          {/* ברז כיבוי אש מוגדל ומלוטש */}
           <svg width="30" height="55" viewBox="0 0 30 60">
             <rect x="6" y="16" width="18" height="40" rx="5" fill="#E53E3E" />
             <circle cx="15" cy="12" r="9" fill="#E53E3E" />
@@ -283,7 +266,6 @@ function LoginPage() {
             <circle cx="15" cy="30" r="4" fill="#A0AEC0" />
             <rect x="5" y="52" width="20" height="8" fill="#4A5568" />
           </svg>
-
         </div>
 
       </div>
@@ -300,6 +282,29 @@ function LoginPage() {
             <circle cx="58" cy="24" r="9" />
             <circle cx="72" cy="36" r="8" />
           </svg>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 📜 חלונית אישור התקנון (Terms Acceptance Popup) 📜 */}
+      {/* ========================================================================= */}
+      {showTerms && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(45,42,30,0.55)', zIndex: 9998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', padding: '24px 20px', maxWidth: '360px', width: '100%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 12px 40px rgba(0,0,0,0.2)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#3A2A1E', marginBottom: '4px', textAlign: 'center' }}>Terms of Use</h2>
+            <p style={{ fontSize: '11px', color: '#B0826A', textAlign: 'center', marginBottom: '16px' }}>Please review and accept to continue</p>
+
+            <div style={{ fontSize: '12px', lineHeight: 1.6, color: 'var(--color-text)', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
+              <p>By creating an account and using Dogctor, you agree to the following:</p>
+              <p><b>Not medical advice.</b> Dogctor's AI assistant provides general information only and does not replace professional veterinary care. Always consult a licensed veterinarian for any health concern about your dog.</p>
+              <p><b>Your data.</b> Your dog's profile, logs, and photos are stored securely to provide the app's features, and are never sold.</p>
+              <p><b>Your responsibility.</b> You are responsible for the accuracy of the information you enter and for keeping your login safe.</p>
+            </div>
+
+            <button onClick={acceptTerms} style={{ width: '100%', padding: '13px', background: '#FF6B35', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-family)', cursor: 'pointer' }}>
+              I Accept
+            </button>
+          </div>
         </div>
       )}
 
@@ -329,7 +334,6 @@ function LoginPage() {
       {/* ========================================================================= */}
       <div style={{ width: '100%', maxWidth: '360px', position: 'relative', zIndex: 2, textAlign: 'center' }}>
 
-        {/* לוגו הכלב המרכזי */}
         <svg width="140" height="140" viewBox="0 0 100 100">
           <ellipse cx="50" cy="92" rx="28" ry="5" fill="#F0DCC8"/>
           <path d="M 28 80 Q 28 56 50 56 Q 72 56 72 80 Z" fill="#D7A15C"/>
@@ -349,7 +353,6 @@ function LoginPage() {
         <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#3A2A1E', margin: 0 }}>Dogctor</h1>
         <p style={{ fontSize: '13px', color: '#B0826A', margin: '4px 0 24px' }}>Smart health for your dog</p>
 
-        {/* כפתורי בחירת מצב ראשוני */}
         {mode === null && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '0 8px' }}>
             <button onClick={() => { setMode('login'); setError('') }} style={{ width: '100%', padding: '13px', background: '#FF6B35', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-family)', cursor: 'pointer' }}>Log in</button>
@@ -357,11 +360,9 @@ function LoginPage() {
           </div>
         )}
 
-        {/* טופס השדות הדינמי */}
         {mode !== null && (
           <div style={{ position: 'relative', background: '#fff', border: '2px solid #FFE0CC', borderRadius: '20px', padding: '22px 18px', boxShadow: '0 8px 24px rgba(216,90,48,0.08)', textAlign: 'right' }}>
 
-            {/* משולש בועת הדיבור של הכלב */}
             <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '13px solid transparent', borderRight: '13px solid transparent', borderBottom: '13px solid #FFE0CC' }}></div>
             <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '11px solid transparent', borderRight: '11px solid transparent', borderBottom: '11px solid #fff' }}></div>
 

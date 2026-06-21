@@ -6,6 +6,8 @@ import DashboardPage from './pages/DashboardPage'
 import DailyLogPage from './pages/DailyLogPage'
 import InsightsPage from './pages/InsightsPage'
 import SettingsPage from './pages/SettingsPage'
+import PrivacyPage from './pages/PrivacyPage'
+import TermsPage from './pages/TermsPage'
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
         <Route path="/log" element={<DailyLogPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

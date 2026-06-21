@@ -10,13 +10,10 @@ function SettingsPage() {
     navigate('/')
   }
 
-  // קישור כל פריט לפעולה שלו
   const items = [
     { label: 'Edit dog profile', icon: '🐾', action: () => navigate('/profile') },
-    { label: 'Notifications', icon: '🔔', action: () => {} },
-    { label: 'Subscription', icon: '⭐', action: () => {} },
-    { label: 'Privacy policy', icon: '🔒', action: () => {} },
-    { label: 'Terms of use', icon: '📄', action: () => {} },
+    { label: 'Privacy policy', icon: '🔒', action: () => navigate('/privacy') },
+    { label: 'Terms of use', icon: '📄', action: () => navigate('/terms') },
   ]
 
   return (
