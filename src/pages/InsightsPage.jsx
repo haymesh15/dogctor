@@ -122,7 +122,8 @@ function InsightsPage() {
     const dateStr = d.toISOString().split('T')[0]
     const dayName = d.toLocaleDateString('en-US', { weekday: 'short' })
     const log = logs.find(l => l.date === dateStr)
-    const score = log ? (log.food ? 1 : 0) + (log.water ? 1 : 0) + (log.walk ? 1 : 0) + (log.bathroom ? 1 : 0) : 0
+    const moodPoint = log && (log.mood === 'Happy' || log.mood === 'Calm') ? 1 : 0
+    const score = log ? (log.food ? 1 : 0) + (log.water ? 1 : 0) + (log.walk ? 1 : 0) + (log.bathroom ? 1 : 0) + moodPoint : 0
     last7Days.push({ day: dayName, date: dateStr, score, hasLog: !!log, log })
   }
 
@@ -162,8 +163,8 @@ function InsightsPage() {
               <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '14px' }}>Daily activity · tap a day</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '120px', gap: '6px' }}>
                 {last7Days.map((d, i) => {
-                  const heightPct = (d.score / 4) * 100
-                  const barColor = d.score >= 3 ? '#38A169' : d.score >= 1 ? '#FF8C42' : '#E2E8F0'
+                  const heightPct = (d.score / 5) * 100
+                  const barColor = d.score >= 4 ? '#38A169' : d.score >= 1 ? '#FF8C42' : '#E2E8F0'
                   return (
                     <div key={i} onClick={() => openDay(d)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', cursor: d.hasLog ? 'pointer' : 'default' }}>
                       <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '4px' }}>{d.hasLog ? d.score : ''}</div>
@@ -184,11 +185,11 @@ function InsightsPage() {
               <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', marginTop: '12px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#38A169' }}></div>
-                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Great (3-4)</span>
+                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Great (4-5)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#FF8C42' }}></div>
-                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Partial (1-2)</span>
+                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Partial (1-3)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#E2E8F0' }}></div>
