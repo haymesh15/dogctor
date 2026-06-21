@@ -8,7 +8,7 @@ import { DogStyles, DogActionStyles, DogHappy, DogCalm, DogSleepy, DogSick, DogF
 function DailyLogPage() {
   const navigate = useNavigate()
   const [logged, setLogged] = useState({ Food: false, Water: false, Walk: false, Bathroom: false })
-  const [mood, setMood] = useState(1)
+  const [mood, setMood] = useState(null)
   const [notes, setNotes] = useState('')
   const [dog, setDog] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -91,11 +91,11 @@ function DailyLogPage() {
         Bathroom: dayLog.bathroom
       })
       const moodIndex = moods.indexOf(dayLog.mood)
-      setMood(moodIndex !== -1 ? moodIndex : 1)
+      setMood(moodIndex !== -1 ? moodIndex : null)
     } else {
       // no data for that day -> blank form
       setLogged({ Food: false, Water: false, Walk: false, Bathroom: false })
-      setMood(1)
+      setMood(null)
     }
     setNotes('')
   }, [selectedDate, monthLogs])
@@ -123,7 +123,7 @@ function DailyLogPage() {
         water: logged.Water,
         walk: logged.Walk,
         bathroom: logged.Bathroom,
-        mood: moods[mood],
+        mood: mood !== null ? moods[mood] : null,
         notes: notes
       }, { onConflict: 'dog_id,date' })
 
@@ -237,7 +237,7 @@ function DailyLogPage() {
             ))}
           </div>
 
-          <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Mood</p>
+          <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Mood (optional)</p>
 
           <div style={{ display: 'flex', gap: '6px' }}>
             {[
@@ -246,7 +246,7 @@ function DailyLogPage() {
               { Comp: DogSleepy, label: 'Tired' },
               { Comp: DogSick, label: 'Sick' },
             ].map((item, i) => (
-              <button key={item.label} onClick={() => setMood(i)} style={{
+              <button key={item.label} onClick={() => setMood(mood === i ? null : i)} style={{
                 flex: 1, padding: '6px',
                 background: mood === i ? '#FFF0E8' : 'var(--color-surface)',
                 border: mood === i ? '2px solid #FF6B35' : '1.5px solid var(--color-border)',
