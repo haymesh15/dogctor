@@ -13,10 +13,34 @@ function DailyLogPage() {
   const [dog, setDog] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [monthLogs, setMonthLogs] = useState([])
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
   const today = new Date().toISOString().split('T')[0]
   const moods = ['Happy', 'Calm', 'Tired', 'Sick']
 
+  // build list of days from 1st of month to today
+  const buildMonthDays = () => {
+    const days = []
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const todayNum = now.getDate()
+    for (let day = 1; day <= todayNum; day++) {
+      const d = new Date(year, month, day)
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      days.push({
+        dateStr,
+        dayNum: day,
+        dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        isToday: dateStr === today
+      })
+    }
+    return days
+  }
+  const monthDays = buildMonthDays()
+
+  // load dog + all logs this month
   useEffect(() => {
     const loadData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -39,30 +63,51 @@ function DailyLogPage() {
 
       setDog(dogData)
 
-      const { data: logData } = await supabase
+      const now = new Date()
+      const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+
+      const { data: logsData } = await supabase
         .from('daily_logs')
         .select('*')
         .eq('dog_id', dogData.id)
-        .eq('date', today)
-        .limit(1)
-        .single()
+        .gte('date', firstOfMonth)
+        .order('date', { ascending: true })
 
-      if (logData) {
-        setLogged({
-          Food: logData.food,
-          Water: logData.water,
-          Walk: logData.walk,
-          Bathroom: logData.bathroom
-        })
-        const moodIndex = moods.indexOf(logData.mood)
-        if (moodIndex !== -1) setMood(moodIndex)
-      }
-
+      setMonthLogs(logsData || [])
       setLoading(false)
     }
 
     loadData()
   }, [])
+
+  // whenever selected date or month logs change, load that day into the form
+  useEffect(() => {
+    const dayLog = monthLogs.find(l => l.date === selectedDate)
+    if (dayLog) {
+      setLogged({
+        Food: dayLog.food,
+        Water: dayLog.water,
+        Walk: dayLog.walk,
+        Bathroom: dayLog.bathroom
+      })
+      const moodIndex = moods.indexOf(dayLog.mood)
+      setMood(moodIndex !== -1 ? moodIndex : 1)
+    } else {
+      // no data for that day -> blank form
+      setLogged({ Food: false, Water: false, Walk: false, Bathroom: false })
+      setMood(1)
+    }
+    setNotes('')
+  }, [selectedDate, monthLogs])
+
+  const hasData = (dateStr) => monthLogs.some(l => l.date === dateStr)
+
+  const selectDay = (dateStr) => {
+    // only allow clicking today, or past days that have data
+    if (dateStr === today || hasData(dateStr)) {
+      setSelectedDate(dateStr)
+    }
+  }
 
   const toggleLog = (key) => setLogged(prev => ({ ...prev, [key]: !prev[key] }))
 
@@ -73,7 +118,7 @@ function DailyLogPage() {
       .from('daily_logs')
       .upsert({
         dog_id: dog.id,
-        date: today,
+        date: selectedDate,
         food: logged.Food,
         water: logged.Water,
         walk: logged.Walk,
@@ -99,6 +144,10 @@ function DailyLogPage() {
       </div>
     )
   }
+
+  const selectedLabel = selectedDate === today
+    ? 'Today'
+    : new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-background)', paddingBottom: '70px', position: 'relative', overflow: 'hidden' }}>
@@ -134,28 +183,31 @@ function DailyLogPage() {
 
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {[-2, -1, 0, 1, 2].map(offset => {
-              const d = new Date()
-              d.setDate(d.getDate() + offset)
-              const isToday = offset === 0
-              const dayLabel = isToday ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' })
-              const dayNum = d.getDate()
+          {/* monthly horizontal scrolling strip */}
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {monthDays.map(d => {
+              const clickable = d.isToday || hasData(d.dateStr)
+              const isSelected = d.dateStr === selectedDate
               return (
-                <div key={offset} style={{
-                  flex: 1, padding: '6px 4px', textAlign: 'center',
-                  background: isToday ? 'linear-gradient(135deg, #FF8C42, #FF6B35)' : 'var(--color-surface)',
-                  color: isToday ? 'white' : 'var(--color-text-muted)',
-                  border: isToday ? 'none' : '1.5px solid var(--color-border)',
-                  borderRadius: 'var(--radius-pill)',
-                  fontWeight: 700
+                <div key={d.dateStr} onClick={() => selectDay(d.dateStr)} style={{
+                  flex: '0 0 auto', width: '52px', padding: '6px 4px', textAlign: 'center',
+                  background: isSelected ? 'linear-gradient(135deg, #FF8C42, #FF6B35)' : 'var(--color-surface)',
+                  color: isSelected ? 'white' : clickable ? 'var(--color-text)' : 'var(--color-text-muted)',
+                  border: isSelected ? 'none' : `1.5px solid ${hasData(d.dateStr) ? '#FFC9A3' : 'var(--color-border)'}`,
+                  borderRadius: 'var(--radius-lg)',
+                  fontWeight: 700,
+                  cursor: clickable ? 'pointer' : 'default',
+                  opacity: clickable ? 1 : 0.5
                 }}>
-                  <div style={{ fontSize: '9px', opacity: 0.85 }}>{dayLabel}</div>
-                  <div style={{ fontSize: 'var(--font-size-caption)' }}>{dayNum}</div>
+                  <div style={{ fontSize: '9px', opacity: 0.85 }}>{d.isToday ? 'Today' : d.dayLabel}</div>
+                  <div style={{ fontSize: 'var(--font-size-caption)' }}>{d.dayNum}</div>
+                  <div style={{ fontSize: '8px', marginTop: '2px', height: '8px' }}>{hasData(d.dateStr) ? '●' : ''}</div>
                 </div>
               )
             })}
           </div>
+
+          <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase' }}>{selectedLabel}</p>
 
           <p style={{ fontSize: 'var(--font-size-caption)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Quick log</p>
 
