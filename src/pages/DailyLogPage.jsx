@@ -56,7 +56,6 @@ function DailyLogPage() {
         })
         const moodIndex = moods.indexOf(logData.mood)
         if (moodIndex !== -1) setMood(moodIndex)
-        if (logData.notes) setNotes(logData.notes)
       }
 
       setLoading(false)
