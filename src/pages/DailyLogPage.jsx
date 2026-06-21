@@ -89,6 +89,7 @@ function DailyLogPage() {
       return
     }
 
+    setNotes('')
     navigate('/dashboard')
   }
 
@@ -214,7 +215,7 @@ function DailyLogPage() {
               width: '100%', border: 'none', outline: 'none',
               fontFamily: 'var(--font-family)',
               fontSize: 'var(--font-size-body)',
-              color: 'var(--color-text-muted)',
+              color: 'var(--color-text)',
               background: 'transparent',
               resize: 'none', height: '60px'
             }} />
