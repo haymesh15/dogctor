@@ -45,3 +45,11 @@ body {
   color: var(--color-text);
   font-size: var(--font-size-body);
 }
+
+#root {
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--color-background);
+  min-height: 100vh;
+  box-shadow: 0 0 40px rgba(0,0,0,0.06);
+}

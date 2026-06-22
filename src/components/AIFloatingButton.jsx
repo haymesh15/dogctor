@@ -57,7 +57,6 @@ function AIFloatingButton() {
   const send = async () => {
     if ((!input.trim() && !image) || loading) return
 
-    // store the image WITH the message so history stays intact
     const displayMsg = {
       role: 'user',
       content: input.trim(),
@@ -68,7 +67,6 @@ function AIFloatingButton() {
     const newMessages = [...messages, displayMsg]
     setMessages(newMessages)
 
-    // build api history from stored data (not the cleared variable)
     const apiMessages = newMessages
       .filter((m, idx) => !(m.role === 'assistant' && idx === 0))
       .map(m => {
@@ -106,7 +104,7 @@ function AIFloatingButton() {
     <>
       {!open && (
         <button onClick={() => setOpen(true)} style={{
-          position: 'fixed', bottom: '80px', right: '16px',
+          position: 'fixed', bottom: '80px', right: 'calc(50% - 240px + 16px)',
           width: '60px', height: '60px', borderRadius: '50%',
           border: 'none', cursor: 'pointer', padding: 0,
           boxShadow: '0 4px 16px rgba(216,90,48,0.4)', zIndex: 100,
@@ -118,8 +116,9 @@ function AIFloatingButton() {
 
       {open && (
         <div style={{
-          position: 'fixed', bottom: '0', right: '16px',
-          width: '380px', maxWidth: 'calc(100vw - 32px)',
+          position: 'fixed', bottom: '0',
+          left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: '420px',
           height: '80vh', background: '#fff',
           borderRadius: '20px 20px 0 0',
           boxShadow: '0 -4px 24px rgba(0,0,0,0.15)',
@@ -149,7 +148,8 @@ function AIFloatingButton() {
                 borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                 fontSize: '13px', lineHeight: 1.5,
                 border: m.role === 'user' ? 'none' : '1px solid #FFE0CC',
-                whiteSpace: 'pre-wrap'
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
               }}>
                 {m.imgPreview && <img src={m.imgPreview} alt="upload" style={{ width: '100%', borderRadius: '10px', marginBottom: m.content ? '6px' : 0 }} />}
                 {m.content}
@@ -177,9 +177,9 @@ function AIFloatingButton() {
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && send()}
+              onKeyDown={e => { if (e.key === 'Enter') send() }}
               placeholder="Ask about your dog..."
-              style={{ flex: 1, padding: '10px 14px', border: '1.5px solid #FFE0CC', borderRadius: '20px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+              style={{ flex: 1, minWidth: 0, padding: '10px 14px', border: '1.5px solid #FFE0CC', borderRadius: '20px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)', color: 'var(--color-text)', background: '#fff' }}
             />
             <button onClick={send} disabled={loading} style={{ background: '#FF6B35', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', fontSize: '16px', flexShrink: 0 }}>↑</button>
           </div>
